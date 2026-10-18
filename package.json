@@ -1,0 +1,60 @@
+{
+  "name": "@weavetab/plugin-github",
+  "version": "1.0.0",
+  "description": "Official Weavetab GitHub plugin - analyze repository structure, read raw source files, search and inspect issues, and examine pull requests over the GitHub API without burning browser turns.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "weavetab.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "node --test test/*.test.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@weavetab/sdk": "^2.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "typescript": "^5.5.0"
+  },
+  "keywords": [
+    "weavetab",
+    "weavetab-plugin",
+    "weavetab-official",
+    "mcp",
+    "github",
+    "repository",
+    "issues",
+    "pull-requests",
+    "browser-automation"
+  ],
+  "author": "Weavetab (https://weavetab.dev)",
+  "license": "MIT",
+  "homepage": "https://github.com/Weavetab/plugin-github",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Weavetab/plugin-github.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Weavetab/plugin-github/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
