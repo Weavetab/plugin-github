@@ -51,7 +51,7 @@ export const githubPlugin = definePlugin({
 
     ctx.mcp.registerTool(
       defineTool({
-        name: "github",
+        name: "plugin_github",
         description: TOOL_DESCRIPTION,
         requiresSession: false,
         schema: {
@@ -114,7 +114,7 @@ export const githubPlugin = definePlugin({
     );
 
     ctx.logger?.info(
-      `@weavetab/plugin-github ready — tool "github" registered (cacheTtlMs=${cacheTtlMs}, maxReadLines=${maxReadLines}, defaultIssueLimit=${defaultIssueLimit}).`
+      `@weavetab/plugin-github ready — tool "plugin_github" registered (cacheTtlMs=${cacheTtlMs}, maxReadLines=${maxReadLines}, defaultIssueLimit=${defaultIssueLimit}).`
     );
   },
 

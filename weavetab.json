@@ -55,12 +55,12 @@
     },
     "tools": {
       "add": true,
-      "reason": "Registers the single 'github' MCP tool."
+      "reason": "Registers the single 'plugin_github' MCP tool."
     }
   },
   "tools": [
     {
-      "name": "github",
+      "name": "plugin_github",
       "description": "Interact with GitHub repositories without burning browser turns. Analyze a repo's file tree and README, read raw source files, list/search/inspect issues, and examine pull request details, changed files and comments — all fetched over the GitHub REST API.",
       "inputSchema": {
         "type": "object",

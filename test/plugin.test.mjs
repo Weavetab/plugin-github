@@ -70,16 +70,16 @@ describe("@weavetab/plugin-github", () => {
     }
 
     assert.ok(Array.isArray(manifest.tools) && manifest.tools.length === 1);
-    assert.equal(manifest.tools[0].name, "github");
+    assert.equal(manifest.tools[0].name, "plugin_github");
   });
 
-  it("registers exactly one `github` tool with a fully wired schema", async () => {
+  it("registers exactly one `plugin_github` tool with a fully wired schema", async () => {
     const { ctx, getTool } = makeMockContext();
     await plugin.onLoad(ctx);
 
     const tool = getTool();
-    assert.ok(tool, "github tool must be registered during onLoad");
-    assert.equal(tool.name, "github");
+    assert.ok(tool, "plugin_github tool must be registered during onLoad");
+    assert.equal(tool.name, "plugin_github");
     assert.equal(typeof tool.handler, "function");
 
     const schema = tool.schema;

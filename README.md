@@ -15,7 +15,7 @@
 GitHub support ships as an official plugin rather than a built-in tool: the core server stays lean
 at **41 built-in tools**, and GitHub is delivered as the **independently versioned**
 `@weavetab/plugin-github` package that can be installed, updated and removed like any other plugin.
-It registers a single `github` tool (actions: `analyze`, `read`, `issues`, `pr`).
+It registers a single `plugin_github` tool (actions: `analyze`, `read`, `issues`, `pr`).
 
 All GitHub data is fetched directly over HTTP (`api.github.com` / `raw.githubusercontent.com`),
 so the active browser tab is **never navigated or mutated** and no browser turns are consumed.
@@ -33,7 +33,7 @@ Because the package name starts with `@weavetab/plugin-`, it is automatically tr
 
 Restart the Weavetab MCP server to activate the tool.
 
-## The `github` tool
+## The `plugin_github` tool
 
 A single, well-organized action-dispatch tool.
 
@@ -100,7 +100,7 @@ Written to `~/.weavetab/plugins/@weavetab_plugin-github/config.json` on first lo
 | `config.read` / `config.write` | Read and persist isolated plugin settings. |
 | `cdp.evaluate` | Read the active tab URL **only**, to infer the target repo when `repo` is omitted. |
 | `network: api.github.com`, `raw.githubusercontent.com`, `github.com` | Fetch public repo data over HTTP. |
-| `tools.add` | Register the single `github` tool. |
+| `tools.add` | Register the single `plugin_github` tool. |
 
 No filesystem access beyond the plugin's own sandbox, no HUD/overlay injection, no tab mutation.
 
@@ -117,7 +117,7 @@ npm run dev        # tsc --watch
 
 ```text
 plugin-github/
-├── src/index.ts       # definePlugin + registerTool("github")
+├── src/index.ts       # definePlugin + registerTool("plugin_github")
 ├── src/github.ts      # action dispatcher
 ├── src/{analyze,read,issues,pr}.ts
 ├── src/{repoContext,cache,rateLimiter,types}.ts
