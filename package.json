@@ -1,6 +1,6 @@
 {
   "name": "@weavetab/plugin-github",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Official Weavetab GitHub plugin - analyze repository structure, read raw source files, search and inspect issues, and examine pull requests over the GitHub API without burning browser turns.",
   "type": "module",
   "main": "dist/index.js",

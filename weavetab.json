@@ -1,7 +1,7 @@
 {
   "$schema": "https://weavetab.dev/schema/plugin.json",
   "name": "@weavetab/plugin-github",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Official Weavetab GitHub plugin. Analyze repository structure, read raw source files, search and inspect issues, and examine pull requests over the public GitHub REST API — fetched directly over HTTP, so no browser turns are consumed.",
   "entry": "dist/index.js",
   "engines": {

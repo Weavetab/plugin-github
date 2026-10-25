@@ -45,7 +45,7 @@ describe("@weavetab/plugin-github", () => {
   it("exposes a valid Weavetab plugin definition", () => {
     assert.equal(githubPlugin, plugin);
     assert.equal(plugin.name, "@weavetab/plugin-github");
-    assert.equal(plugin.version, "1.0.0");
+    assert.equal(plugin.version, "1.0.1");
     assert.equal(typeof plugin.onLoad, "function");
     assert.equal(typeof plugin.onUnload, "function");
     assert.deepEqual(plugin.defaultConfig, {
@@ -58,7 +58,7 @@ describe("@weavetab/plugin-github", () => {
   it("ships a manifest whose name grants Official trust", () => {
     assert.equal(manifest.name, "@weavetab/plugin-github");
     assert.ok(manifest.name.startsWith("@weavetab/plugin-"), "must be an official plugin prefix");
-    assert.equal(manifest.version, "1.0.0");
+    assert.equal(manifest.version, "1.0.1");
     assert.equal(manifest.entry, "dist/index.js");
 
     // Every declared permission must carry a human-readable reason.

@@ -34,7 +34,7 @@ function positiveInt(value: unknown, fallback: number): number {
 
 export const githubPlugin = definePlugin({
   name: "@weavetab/plugin-github",
-  version: "1.0.0",
+  version: "1.0.1",
   description:
     "Official Weavetab GitHub plugin — analyze repositories, read raw source, inspect issues and pull requests over the GitHub API.",
 
