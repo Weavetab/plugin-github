@@ -24,7 +24,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@weavetab/sdk": "^2.5.2"
+    "@weavetab/sdk": "^2.6.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
