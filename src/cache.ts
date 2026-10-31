@@ -18,9 +18,10 @@ function cacheFile(owner: string, repo: string): string {
 export async function loadRepoCache(
   owner: string,
   repo: string,
-  store: PluginStorage,
+  store: PluginStorage | undefined | null,
   ttlMs: number
 ): Promise<GithubRepoCache | null> {
+  if (!store || typeof store.getJSON !== "function") return null;
   const data = await store.getJSON<GithubRepoCache>(cacheFile(owner, repo));
   if (!data || typeof data.analyzed_at !== "number") return null;
   if (Date.now() - data.analyzed_at > ttlMs) return null; // stale
@@ -28,6 +29,10 @@ export async function loadRepoCache(
 }
 
 /** Persist an analysis result into the plugin's isolated storage. */
-export async function saveRepoCache(data: GithubRepoCache, store: PluginStorage): Promise<void> {
+export async function saveRepoCache(
+  data: GithubRepoCache,
+  store: PluginStorage | undefined | null
+): Promise<void> {
+  if (!store || typeof store.setJSON !== "function") return;
   await store.setJSON(cacheFile(data.owner, data.repo), data);
 }

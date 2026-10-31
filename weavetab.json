@@ -1,11 +1,12 @@
 {
   "$schema": "https://weavetab.dev/schema/plugin.json",
   "name": "@weavetab/plugin-github",
-  "version": "1.0.1",
-  "description": "Official Weavetab GitHub plugin. Analyze repository structure, read raw source files, search and inspect issues, and examine pull requests over the public GitHub REST API — fetched directly over HTTP, so no browser turns are consumed.",
+  "displayName": "GitHub",
+  "version": "1.1.0",
+  "description": "Official Weavetab GitHub plugin. Modular tools to analyze repositories, read raw source files, search issues, inspect pull requests, fetch raw diffs, and inspect active tabs directly without burning browser turns or API quota.",
   "entry": "dist/index.js",
   "engines": {
-    "weavetab": "^2.5.1",
+    "weavetab": "^2.5.2",
     "node": ">=18.0.0"
   },
   "environments": [
@@ -24,7 +25,8 @@
     "Developer Tools",
     "Repositories",
     "Issues",
-    "Pull Requests"
+    "Pull Requests",
+    "Diff"
   ],
   "links": {
     "github": "https://github.com/weavetab/plugin-github",
@@ -39,11 +41,11 @@
     "config": {
       "read": true,
       "write": true,
-      "reason": "Reads and persists the isolated plugin configuration (cache TTL, read limits, default issue limit) at ~/.weavetab/plugins/@weavetab_plugin-github/config.json."
+      "reason": "Reads and persists plugin configuration (cache TTL, read limits, issue limits, optional token) at ~/.weavetab/plugins/@weavetab_plugin-github/config.json."
     },
     "cdp": {
       "evaluate": true,
-      "reason": "Reads the active tab URL only, to infer the target repository when the optional 'repo' argument is omitted. Never navigates or mutates the page."
+      "reason": "Evaluates active tab URL and DOM on github.com to infer targets or inspect active views without API calls."
     },
     "network": {
       "domains": [
@@ -51,63 +53,161 @@
         "raw.githubusercontent.com",
         "github.com"
       ],
-      "reason": "Fetches repository metadata, file trees, raw source files, issues and pull requests from the public GitHub REST API and raw content CDN."
+      "reason": "Fetches repository metadata, file trees, raw source files, issues, pull requests, and raw git diffs from GitHub REST API, CDN, and web endpoints."
     },
     "tools": {
       "add": true,
-      "reason": "Registers the single 'plugin_github' MCP tool."
+      "reason": "Registers github_analyze, github_read, github_issues, github_pull_request, github_diff, and github_active_tab MCP tools."
     }
   },
   "tools": [
     {
-      "name": "plugin_github",
-      "description": "Interact with GitHub repositories without burning browser turns. Analyze a repo's file tree and README, read raw source files, list/search/inspect issues, and examine pull request details, changed files and comments — all fetched over the GitHub REST API.",
+      "name": "github_analyze",
+      "description": "Analyze a GitHub repository's metadata, default branch, recursive file tree, and README snippet over the GitHub REST API without burning browser turns.",
       "inputSchema": {
         "type": "object",
         "properties": {
-          "action": {
-            "type": "string",
-            "enum": ["analyze", "read", "issues", "pr"],
-            "description": "The GitHub operation to perform. 'analyze' = repository metadata, recursive file tree and README snippet. 'read' = raw file contents (requires 'paths'). 'issues' = list, search or inspect issues. 'pr' = list or inspect pull requests."
-          },
           "repo": {
             "type": "string",
-            "description": "Target repository as an 'owner/repo' slug or a full https://github.com/owner/repo URL. Optional — when omitted, the repository is inferred from the active browser tab (which must be on a github.com repo page)."
-          },
+            "description": "Target repository as 'owner/repo' or full github.com URL. When omitted, inferred from the active browser tab."
+          }
+        }
+      }
+    },
+    {
+      "name": "github_read",
+      "description": "Fetch raw source files from a GitHub repository directly over HTTP without burning browser turns or API search quota.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
           "paths": {
             "type": "array",
             "items": { "type": "string" },
-            "description": "READ ONLY. File paths relative to the repository root to fetch (e.g. ['src/index.ts', 'README.md'])."
+            "description": "File paths relative to the repository root, e.g. ['src/index.ts', 'README.md']."
+          },
+          "repo": {
+            "type": "string",
+            "description": "Target repository as 'owner/repo' or full github.com URL. When omitted, inferred from active tab."
+          },
+          "branch": {
+            "type": "string",
+            "description": "Target branch or tag (defaults to 'main' or cached default branch). Avoids API discovery calls."
           },
           "line_range": {
             "type": "array",
             "items": { "type": "number" },
-            "description": "READ ONLY. Optional [start, end] 1-indexed line range to return from each file. When omitted, files longer than 'maxReadLines' are truncated from the top."
+            "description": "Optional [start, end] 1-indexed line range to return per file."
+          }
+        }
+      }
+    },
+    {
+      "name": "github_issues",
+      "description": "List, search, or inspect issues and comments in a GitHub repository without burning browser turns.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "repo": {
+            "type": "string",
+            "description": "Target repository as 'owner/repo' or full github.com URL."
           },
           "number": {
             "type": "number",
-            "description": "ISSUES / PR ONLY. Issue or pull request number to fetch the full detail and comments for. When omitted, a recent list is returned instead."
+            "description": "Specific issue number to fetch full details and timeline comments for."
           },
           "search": {
             "type": "string",
-            "description": "ISSUES ONLY. Free-text search query to find issues (uses the GitHub Search API, scoped to the target repo)."
+            "description": "Free-text query to search issues in the repository."
           },
           "labels": {
             "type": "array",
             "items": { "type": "string" },
-            "description": "ISSUES ONLY. Restrict results to issues carrying all of the given labels."
+            "description": "Restrict results to these labels."
           },
           "state": {
             "type": "string",
             "enum": ["open", "closed", "all"],
-            "description": "ISSUES ONLY. Filter by issue state."
+            "description": "Filter by issue state (default 'open')."
           },
           "limit": {
             "type": "number",
-            "description": "ISSUES ONLY. Maximum number of issues to return when listing or searching (default 5)."
+            "description": "Maximum number of issues to return (default 5)."
           }
-        },
-        "required": ["action"]
+        }
+      }
+    },
+    {
+      "name": "github_pull_request",
+      "description": "Examine pull request details, changed files, diff stats, and comments, or list recent pull requests in a GitHub repository without burning browser turns.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "repo": {
+            "type": "string",
+            "description": "Target repository as 'owner/repo' or full github.com URL."
+          },
+          "number": {
+            "type": "number",
+            "description": "Pull request number to fetch full detail, changed files, and comments for."
+          },
+          "state": {
+            "type": "string",
+            "enum": ["open", "closed", "all"],
+            "description": "Filter pull requests by state (default 'all' when listing)."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Maximum pull requests to return when listing (default 10)."
+          }
+        }
+      }
+    },
+    {
+      "name": "github_diff",
+      "description": "Fetch raw git diffs or patches for pull requests, commits, or branch comparisons directly from github.com without consuming REST API rate limits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "repo": {
+            "type": "string",
+            "description": "Target repository as 'owner/repo' or full github.com URL."
+          },
+          "pull_number": {
+            "type": "number",
+            "description": "Pull request number to fetch the diff or patch for."
+          },
+          "commit_sha": {
+            "type": "string",
+            "description": "Commit SHA to fetch the diff or patch for."
+          },
+          "base": {
+            "type": "string",
+            "description": "Base branch or commit for compare diff (requires 'head')."
+          },
+          "head": {
+            "type": "string",
+            "description": "Head branch or commit for compare diff (requires 'base')."
+          },
+          "format": {
+            "type": "string",
+            "enum": ["diff", "patch"],
+            "description": "Output format: 'diff' (unified diff) or 'patch' (git patch with metadata). Default 'diff'."
+          }
+        }
+      }
+    },
+    {
+      "name": "github_active_tab",
+      "description": "Inspect the active browser tab on github.com via local CDP evaluation. Extracts repository overview, open PR/issue discussion, or file content directly from the browser DOM with ZERO API calls. Works on private repositories you are logged into.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": ["auto", "summary", "files", "comments", "raw"],
+            "description": "Scope of data extraction from the page DOM (default 'auto')."
+          }
+        }
       }
     }
   ]

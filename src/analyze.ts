@@ -1,14 +1,9 @@
 import type { GithubError, GithubRepoCache, GithubRunContext, TreeEntry } from "./types.js";
 import { getRepoContext, isGithubError } from "./repoContext.js";
 import { loadRepoCache, saveRepoCache } from "./cache.js";
-import { canMakeApiCall, handleApiResponse } from "./rateLimiter.js";
+import { canMakeApiCall, handleApiResponse, getApiHeaders } from "./rateLimiter.js";
 
 const README_CANDIDATES = ["README.md", "README", "readme.md", "Readme.md", "README.txt"];
-
-const API_HEADERS = {
-  Accept: "application/vnd.github.v3+json",
-  "User-Agent": "Weavetab-GitHub-Plugin",
-};
 
 /**
  * `analyze` action — repository metadata, recursive default-branch file tree and
@@ -29,9 +24,11 @@ export async function githubAnalyze(
   const rateLimitCheck = canMakeApiCall();
   if (isGithubError(rateLimitCheck)) return rateLimitCheck;
 
+  const apiHeaders = getApiHeaders(ctx.token);
+
   // 1. Repo metadata
   const repoRes = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-    headers: API_HEADERS,
+    headers: apiHeaders,
   });
 
   const handledRepoRes = handleApiResponse(repoRes);
@@ -61,7 +58,7 @@ export async function githubAnalyze(
   let file_tree: TreeEntry[] = [];
   const treeRes = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/git/trees/${default_branch}?recursive=1`,
-    { headers: API_HEADERS }
+    { headers: apiHeaders }
   );
 
   const handledTreeRes = handleApiResponse(treeRes);

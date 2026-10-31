@@ -1,40 +1,28 @@
-import type { GithubRunContext } from "./types.js";
-import { getRepoContext, isGithubError } from "./repoContext.js";
-import { canMakeApiCall, handleApiResponse } from "./rateLimiter.js";
-
-interface IssueArgs {
-  repo?: string;
-  search?: string;
-  number?: number;
-  labels?: string[];
-  state?: "open" | "closed" | "all";
-  limit?: number;
-}
-
-const API_HEADERS = {
-  Accept: "application/vnd.github.v3+json",
-  "User-Agent": "Weavetab-GitHub-Plugin",
-};
+import type { GithubRunContext, GithubIssuesArgs } from "./types.js";
+import { getDetailedRepoContext, isGithubError } from "./repoContext.js";
+import { canMakeApiCall, handleApiResponse, getApiHeaders } from "./rateLimiter.js";
 
 /**
  * `issues` action — inspect a single issue (with comments) when `number` is
- * given, otherwise list or search issues in the target repository.
+ * given or open in the active tab, otherwise list or search issues.
  */
-export async function githubIssues(ctx: GithubRunContext, args: IssueArgs): Promise<any> {
-  const context = await getRepoContext(ctx.session, args.repo);
+export async function githubIssues(ctx: GithubRunContext, args: GithubIssuesArgs = {}): Promise<any> {
+  const context = await getDetailedRepoContext(ctx.session, args.repo);
   if (isGithubError(context)) return context;
 
   const { owner, repo } = context;
+  const targetNumber = typeof args.number === "number" ? args.number : context.issueNumber;
   const limit = args.limit || ctx.defaultIssueLimit;
+  const apiHeaders = getApiHeaders(ctx.token);
 
   const rateLimitCheck = canMakeApiCall();
   if (isGithubError(rateLimitCheck)) return rateLimitCheck;
 
   // Single issue + comments
-  if (args.number) {
+  if (targetNumber) {
     const issueRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/issues/${args.number}`,
-      { headers: API_HEADERS }
+      `https://api.github.com/repos/${owner}/${repo}/issues/${targetNumber}`,
+      { headers: apiHeaders }
     );
     const handledIssueRes = handleApiResponse(issueRes);
     if (isGithubError(handledIssueRes)) return handledIssueRes;
@@ -43,7 +31,7 @@ export async function githubIssues(ctx: GithubRunContext, args: IssueArgs): Prom
       return {
         error: "FETCH_FAILED",
         status: issueRes.status,
-        message: `Failed to fetch issue #${args.number}`,
+        message: `Failed to fetch issue #${targetNumber}`,
       };
     }
 
@@ -54,8 +42,8 @@ export async function githubIssues(ctx: GithubRunContext, args: IssueArgs): Prom
       const rateLimitCheck2 = canMakeApiCall();
       if (!isGithubError(rateLimitCheck2)) {
         const commentsRes = await fetch(
-          `https://api.github.com/repos/${owner}/${repo}/issues/${args.number}/comments`,
-          { headers: API_HEADERS }
+          `https://api.github.com/repos/${owner}/${repo}/issues/${targetNumber}/comments`,
+          { headers: apiHeaders }
         );
         const handledCommentsRes = handleApiResponse(commentsRes);
         if (!isGithubError(handledCommentsRes) && commentsRes.ok) {
@@ -94,7 +82,7 @@ export async function githubIssues(ctx: GithubRunContext, args: IssueArgs): Prom
     urlStr = `https://api.github.com/search/issues?q=${encodeURIComponent(q)}&per_page=${limit}`;
   }
 
-  const listRes = await fetch(urlStr, { headers: API_HEADERS });
+  const listRes = await fetch(urlStr, { headers: apiHeaders });
   const handledListRes = handleApiResponse(listRes);
   if (isGithubError(handledListRes)) return handledListRes;
 

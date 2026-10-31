@@ -2,11 +2,12 @@ import type { GithubError, GithubRunContext, GithubToolArgs } from "./types.js";
 import { githubAnalyze } from "./analyze.js";
 import { githubRead } from "./read.js";
 import { githubIssues } from "./issues.js";
-import { githubGetPr } from "./pr.js";
+import { githubPullRequest, githubGetPr } from "./pr.js";
+import { githubDiff } from "./diff.js";
+import { githubActiveTab } from "./activeTab.js";
 
 /**
- * Single entry point for the `github` MCP tool. Dispatches to the matching
- * action handler and funnels every result through a plain serializable value.
+ * Backwards-compatible legacy entry point for single-tool callers.
  */
 export async function runGithub(
   ctx: GithubRunContext,
@@ -24,7 +25,7 @@ export async function runGithub(
           message: "action 'read' requires a 'paths' array with at least one file path.",
         };
       }
-      return githubRead(ctx, { repo: args.repo, paths, line_range: args.line_range });
+      return githubRead(ctx, { repo: args.repo, paths, branch: args.branch, line_range: args.line_range });
     }
 
     case "issues":
@@ -38,7 +39,7 @@ export async function runGithub(
       });
 
     case "pr":
-      return githubGetPr(ctx, { repo: args.repo, number: args.number, state: args.state, limit: args.limit });
+      return githubPullRequest(ctx, { repo: args.repo, number: args.number, state: args.state, limit: args.limit });
 
     default:
       return {
@@ -48,4 +49,12 @@ export async function runGithub(
   }
 }
 
-export { githubAnalyze, githubRead, githubIssues, githubGetPr };
+export {
+  githubAnalyze,
+  githubRead,
+  githubIssues,
+  githubPullRequest,
+  githubGetPr,
+  githubDiff,
+  githubActiveTab,
+};

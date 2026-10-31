@@ -1,37 +1,30 @@
-import type { GithubRunContext } from "./types.js";
-import { getRepoContext, isGithubError } from "./repoContext.js";
-import { canMakeApiCall, handleApiResponse } from "./rateLimiter.js";
-
-interface PrArgs {
-  repo?: string;
-  number?: number;
-  state?: "open" | "closed" | "all";
-  limit?: number;
-}
+import type { GithubRunContext, GithubPullRequestArgs } from "./types.js";
+import { getDetailedRepoContext, isGithubError } from "./repoContext.js";
+import { canMakeApiCall, handleApiResponse, getApiHeaders } from "./rateLimiter.js";
 
 const DEFAULT_PR_LIMIT = 10;
 
-const API_HEADERS = {
-  Accept: "application/vnd.github.v3+json",
-  "User-Agent": "Weavetab-GitHub-Plugin",
-};
-
 /**
- * `pr` action — inspect a single pull request (changed files, diff stats and
- * comments) when `number` is given, otherwise list recent pull requests.
+ * `pull_request` action — inspect a single pull request (changed files, diff stats and
+ * comments) when `number` is given or active in tab, otherwise list recent pull requests.
  */
-export async function githubGetPr(ctx: GithubRunContext, args: PrArgs): Promise<any> {
-  const context = await getRepoContext(ctx.session, args.repo);
+export async function githubPullRequest(
+  ctx: GithubRunContext,
+  args: GithubPullRequestArgs = {}
+): Promise<any> {
+  const context = await getDetailedRepoContext(ctx.session, args.repo);
   if (isGithubError(context)) return context;
 
   const { owner, repo } = context;
+  const targetNumber = typeof args.number === "number" ? args.number : context.pullNumber;
+  const apiHeaders = getApiHeaders(ctx.token);
 
   const rateLimitCheck = canMakeApiCall();
   if (isGithubError(rateLimitCheck)) return rateLimitCheck;
 
-  if (args.number) {
-    const prRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${args.number}`, {
-      headers: API_HEADERS,
+  if (targetNumber) {
+    const prRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${targetNumber}`, {
+      headers: apiHeaders,
     });
     const handledPrRes = handleApiResponse(prRes);
     if (isGithubError(handledPrRes)) return handledPrRes;
@@ -40,7 +33,7 @@ export async function githubGetPr(ctx: GithubRunContext, args: PrArgs): Promise<
       return {
         error: "FETCH_FAILED",
         status: prRes.status,
-        message: `Failed to fetch PR #${args.number}`,
+        message: `Failed to fetch PR #${targetNumber}`,
       };
     }
 
@@ -50,8 +43,8 @@ export async function githubGetPr(ctx: GithubRunContext, args: PrArgs): Promise<
     const rateLimitCheck2 = canMakeApiCall();
     if (!isGithubError(rateLimitCheck2)) {
       const filesRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/pulls/${args.number}/files`,
-        { headers: API_HEADERS }
+        `https://api.github.com/repos/${owner}/${repo}/pulls/${targetNumber}/files`,
+        { headers: apiHeaders }
       );
       const handledFilesRes = handleApiResponse(filesRes);
       if (!isGithubError(handledFilesRes) && filesRes.ok) {
@@ -65,8 +58,8 @@ export async function githubGetPr(ctx: GithubRunContext, args: PrArgs): Promise<
       const rateLimitCheck3 = canMakeApiCall();
       if (!isGithubError(rateLimitCheck3)) {
         const commentsRes = await fetch(
-          `https://api.github.com/repos/${owner}/${repo}/issues/${args.number}/comments`,
-          { headers: API_HEADERS }
+          `https://api.github.com/repos/${owner}/${repo}/issues/${targetNumber}/comments`,
+          { headers: apiHeaders }
         );
         const handledCommentsRes = handleApiResponse(commentsRes);
         if (!isGithubError(handledCommentsRes) && commentsRes.ok) {
@@ -103,7 +96,7 @@ export async function githubGetPr(ctx: GithubRunContext, args: PrArgs): Promise<
   const state = args.state || "all";
   const listRes = await fetch(
     `https://api.github.com/repos/${owner}/${repo}/pulls?state=${state}&per_page=${limit}`,
-    { headers: API_HEADERS }
+    { headers: apiHeaders }
   );
   const handledListRes = handleApiResponse(listRes);
   if (isGithubError(handledListRes)) return handledListRes;
@@ -122,3 +115,5 @@ export async function githubGetPr(ctx: GithubRunContext, args: PrArgs): Promise<
     updated_at: pr.updated_at,
   }));
 }
+
+export const githubGetPr = githubPullRequest;

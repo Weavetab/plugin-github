@@ -9,6 +9,18 @@ const SAFETY_THRESHOLD = 5;
 
 const state: RateLimitState = { remaining: 60, resetAt: null };
 
+export function getApiHeaders(token?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "Weavetab-GitHub-Plugin",
+  };
+  const tok = token || process.env.GITHUB_TOKEN;
+  if (tok) {
+    headers.Authorization = `Bearer ${tok.trim()}`;
+  }
+  return headers;
+}
+
 /**
  * Guard that refuses new API calls once the remaining quota drops below a safety
  * threshold, so we never trip GitHub's hard rate limit mid-flow.
@@ -17,8 +29,8 @@ export function canMakeApiCall(): true | GithubError {
   const nowSec = Math.floor(Date.now() / 1000);
 
   if (state.resetAt && nowSec >= state.resetAt) {
-    // We've passed the reset window, assume quota is restored.
-    state.remaining = 60;
+    const hasToken = Boolean(process.env.GITHUB_TOKEN);
+    state.remaining = hasToken ? 5000 : 60;
     state.resetAt = null;
   }
 
@@ -45,6 +57,15 @@ export function recordApiCall(headers: Headers): void {
   if (resetStr) {
     state.resetAt = parseInt(resetStr, 10) || state.resetAt;
   }
+}
+
+export function getRateLimitStatus(): { remaining: number; resetAt: number | null; limit: number } {
+  const hasToken = Boolean(process.env.GITHUB_TOKEN);
+  return {
+    remaining: state.remaining,
+    resetAt: state.resetAt,
+    limit: hasToken ? 5000 : 60,
+  };
 }
 
 export function handleApiResponse(response: Response): Response | GithubError {

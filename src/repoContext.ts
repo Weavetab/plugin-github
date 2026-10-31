@@ -1,31 +1,57 @@
-import type { CdpSession, GithubError, RepoContext } from "./types.js";
+import type { CdpSession, DetailedRepoContext, GithubError, RepoContext } from "./types.js";
 
 /**
- * Parse a repo slug from a string that can be:
- *  - "owner/repo"
- *  - "https://github.com/owner/repo[/anything]"
- *
- * Returns null (instead of throwing) for any non-string input so callers never
- * encounter `TypeError: slug.trim is not a function`.
+ * Parses deep context from a GitHub URL string.
+ */
+export function parseDetailedUrl(urlStr: string): DetailedRepoContext | null {
+  try {
+    const u = new URL(urlStr);
+    if (u.hostname !== "github.com" && u.hostname !== "www.github.com") return null;
+
+    const parts = u.pathname.split("/").filter(Boolean);
+    if (parts.length < 2) return null;
+
+    const owner = parts[0]!;
+    const repo = parts[1]!;
+    const section = parts[2];
+
+    const ctx: DetailedRepoContext = { owner, repo, section };
+
+    if (!section) return ctx;
+
+    if (section === "pull" && parts[3]) {
+      const num = parseInt(parts[3], 10);
+      if (!Number.isNaN(num)) ctx.pullNumber = num;
+    } else if (section === "issues" && parts[3]) {
+      const num = parseInt(parts[3], 10);
+      if (!Number.isNaN(num)) ctx.issueNumber = num;
+    } else if (section === "commit" && parts[3]) {
+      ctx.commitSha = parts[3];
+    } else if ((section === "blob" || section === "tree") && parts[3]) {
+      ctx.branch = parts[3];
+      if (parts.length > 4) {
+        ctx.filePath = parts.slice(4).join("/");
+      }
+    }
+
+    return ctx;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse a repo slug or full URL into a basic RepoContext.
  */
 export function parseRepoSlug(slug: unknown): RepoContext | null {
-  // Runtime guard: MCP argument dispatch can forward an object / number / null
-  // when the model omits the field in some call patterns.
   if (typeof slug !== "string") return null;
 
   const trimmed = slug.trim();
   if (!trimmed) return null;
 
-  // Full GitHub URL
-  try {
-    const u = new URL(trimmed);
-    if (u.hostname === "github.com" || u.hostname === "www.github.com") {
-      const parts = u.pathname.split("/").filter(Boolean);
-      if (parts.length >= 2) return { owner: parts[0]!, repo: parts[1]! };
-    }
-  } catch {
-    /* not a URL — fall through to shorthand parse */
-  }
+  // Try parsing full URL first
+  const detailed = parseDetailedUrl(trimmed);
+  if (detailed) return { owner: detailed.owner, repo: detailed.repo };
 
   // "owner/repo" shorthand
   const parts = trimmed.split("/").filter(Boolean);
@@ -34,23 +60,19 @@ export function parseRepoSlug(slug: unknown): RepoContext | null {
 }
 
 /**
- * Resolve the current GitHub repository target.
- *
- * @param session  - CDP session used only to read the active tab URL.
- * @param repoSlug - Optional "owner/repo" or full GitHub URL. When provided, it
- *                   is used directly and the active tab is never read or mutated.
- *
- * GitHub data is always fetched over HTTP, so the active tab is never navigated.
+ * Resolve detailed GitHub repository and route context.
  */
-export async function getRepoContext(
+export async function getDetailedRepoContext(
   session: CdpSession | undefined,
   repoSlug?: unknown
-): Promise<RepoContext | GithubError> {
+): Promise<DetailedRepoContext | GithubError> {
   const slugStr =
     typeof repoSlug === "string" && repoSlug.trim() !== "" ? repoSlug.trim() : undefined;
 
-  // Explicit slug wins over the current tab URL.
   if (slugStr) {
+    const detailed = parseDetailedUrl(slugStr);
+    if (detailed) return detailed;
+
     const parsed = parseRepoSlug(slugStr);
     if (!parsed) {
       return {
@@ -65,7 +87,7 @@ export async function getRepoContext(
     return {
       error: "NO_CONTEXT",
       message:
-        "No active browser session. Pass a 'repo' argument (e.g. \"owner/repo\") or open a github.com repository in the browser.",
+        "No active browser session. Pass a 'repo' argument (e.g. \"owner/repo\") or open a github.com page in the browser.",
     };
   }
 
@@ -87,30 +109,25 @@ export async function getRepoContext(
     return { error: "CONTEXT_ERROR", message: "Active tab URL is empty." };
   }
 
-  let url: URL;
-  try {
-    url = new URL(urlStr);
-  } catch {
-    return { error: "INVALID_URL", message: "Active tab URL is invalid." };
-  }
-
-  if (url.hostname !== "github.com") {
+  const detailed = parseDetailedUrl(urlStr);
+  if (!detailed) {
     return {
       error: "NOT_ON_GITHUB_REPO",
-      message:
-        "Navigate to a GitHub repository first, or pass a 'repo' argument (e.g. \"owner/repo\").",
+      message: "Active tab is not on a GitHub repository page. Pass a 'repo' argument (e.g. \"owner/repo\").",
     };
   }
 
-  const parts = url.pathname.split("/").filter(Boolean);
-  if (parts.length < 2) {
-    return {
-      error: "NOT_ON_GITHUB_REPO",
-      message: "Navigate to a specific GitHub repository first (e.g. github.com/owner/repo).",
-    };
-  }
+  return detailed;
+}
 
-  return { owner: parts[0]!, repo: parts[1]! };
+/**
+ * Resolve the current GitHub repository target.
+ */
+export async function getRepoContext(
+  session: CdpSession | undefined,
+  repoSlug?: unknown
+): Promise<RepoContext | GithubError> {
+  return getDetailedRepoContext(session, repoSlug);
 }
 
 export function isGithubError(result: unknown): result is GithubError {

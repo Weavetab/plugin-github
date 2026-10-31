@@ -1,7 +1,7 @@
 {
   "name": "@weavetab/plugin-github",
-  "version": "1.0.1",
-  "description": "Official Weavetab GitHub plugin - analyze repository structure, read raw source files, search and inspect issues, and examine pull requests over the GitHub API without burning browser turns.",
+  "version": "1.1.0",
+  "description": "Official Weavetab GitHub plugin - modular repository analysis, raw source reads, issues, pull requests, raw diffs, and active-tab DOM inspection without burning browser turns or API quota.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,7 +24,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@weavetab/sdk": "^2.5.1"
+    "@weavetab/sdk": "^2.5.2"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
