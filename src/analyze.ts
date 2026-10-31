@@ -111,6 +111,6 @@ export async function githubAnalyze(
     analyzed_at: Date.now(),
   };
 
-  await saveRepoCache(cacheData, ctx.store);
+  await saveRepoCache(cacheData, ctx.store, ctx.cacheTtlMs);
   return cacheData;
 }

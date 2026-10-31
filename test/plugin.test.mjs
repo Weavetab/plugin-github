@@ -4,6 +4,9 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
+import { createMockContext, simulateToolCall } from "@weavetab/sdk/testing";
+import { runPreflight } from "@weavetab/sdk/preflight";
+
 import plugin, {
   githubPlugin,
   runGithub,
@@ -17,38 +20,18 @@ import plugin, {
 import { parseRepoSlug, parseDetailedUrl, isGithubError } from "../dist/repoContext.js";
 import { parseDiffStats } from "../dist/diff.js";
 import { getRateLimitStatus } from "../dist/rateLimiter.js";
+import { loadRepoCache, saveRepoCache } from "../dist/cache.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const manifest = JSON.parse(readFileSync(join(__dirname, "..", "weavetab.json"), "utf-8"));
 
 /** Build a mock PluginContext tracking all registered tools. */
 function makeMockContext() {
-  const files = new Map();
   const registeredTools = new Map();
-
-  const ctx = {
-    name: plugin.name,
-    pluginDir: "/tmp/weavetab-plugin-github",
-    config: {},
-    storage: {
-      get: async () => null,
-      set: async () => {},
-      delete: async () => false,
-      getJSON: async (name) => (files.has(name) ? files.get(name) : null),
-      setJSON: async (name, data) => {
-        files.set(name, data);
-      },
-      getPath: (sub = "") => join("/tmp/weavetab-plugin-github", sub),
-      list: async () => [],
-    },
-    mcp: {
-      registerTool: (tool) => {
-        registeredTools.set(tool.name, tool);
-      },
-    },
-    logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
+  const ctx = createMockContext({ name: plugin.name });
+  ctx.mcp.registerTool = (tool) => {
+    registeredTools.set(tool.name, tool);
   };
-
   return { ctx, getTools: () => registeredTools, getTool: (name) => registeredTools.get(name) };
 }
 
@@ -56,7 +39,7 @@ describe("@weavetab/plugin-github", () => {
   it("exposes a valid Weavetab plugin definition", () => {
     assert.equal(githubPlugin, plugin);
     assert.equal(plugin.name, "@weavetab/plugin-github");
-    assert.equal(plugin.version, "1.1.0");
+    assert.equal(plugin.version, "1.2.0");
     assert.equal(typeof plugin.onLoad, "function");
     assert.equal(typeof plugin.onUnload, "function");
     assert.deepEqual(plugin.defaultConfig, {
@@ -69,7 +52,7 @@ describe("@weavetab/plugin-github", () => {
   it("ships a manifest with official trust and all 6 declared tools", () => {
     assert.equal(manifest.name, "@weavetab/plugin-github");
     assert.ok(manifest.name.startsWith("@weavetab/plugin-"), "must be an official plugin prefix");
-    assert.equal(manifest.version, "1.1.0");
+    assert.equal(manifest.version, "1.2.0");
     assert.equal(manifest.entry, "dist/index.js");
 
     for (const [key, value] of Object.entries(manifest.permissions)) {
@@ -332,5 +315,42 @@ diff --git a/README.md b/README.md
     assert.equal(res.content[0].type, "text");
     const parsed = JSON.parse(res.content[0].text);
     assert.equal(parsed.error, "MISSING_TARGET");
+  });
+
+  it("supports SDK 2.6.0 TTL storage caching for repo metadata", async () => {
+    const ctx = createMockContext();
+    const mockRepo = {
+      owner: "weavetab",
+      repo: "mcp",
+      default_branch: "main",
+      file_tree: [{ path: "README.md", mode: "100644", type: "blob", size: 100 }],
+      readme_snippet: "# Weavetab",
+      analyzed_at: Date.now(),
+    };
+
+    await saveRepoCache(mockRepo, ctx.storage, 5000);
+    const cached = await loadRepoCache("weavetab", "mcp", ctx.storage, 5000);
+    assert.ok(cached);
+    assert.equal(cached.owner, "weavetab");
+    assert.equal(cached.repo, "mcp");
+    assert.equal(cached.default_branch, "main");
+  });
+
+  it("supports SDK 2.6.0 simulateToolCall testing harness", async () => {
+    const { ctx, getTool } = makeMockContext();
+    await plugin.onLoad(ctx);
+
+    const diffTool = getTool("github_diff");
+    const res = await simulateToolCall(diffTool, { repo: "weavetab/mcp" }, ctx);
+    assert.ok(Array.isArray(res.content));
+    const parsed = JSON.parse(res.content[0].text);
+    assert.equal(parsed.error, "MISSING_TARGET");
+  });
+
+  it("passes official SDK 2.6.0 preflight verification with 0 errors", async () => {
+    process.env.WEAVETAB_OFFICIAL_RELEASE = "1";
+    const report = await runPreflight(join(__dirname, ".."));
+    assert.equal(report.success, true);
+    assert.equal(report.errors.length, 0);
   });
 });

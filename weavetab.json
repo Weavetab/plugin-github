@@ -2,11 +2,11 @@
   "$schema": "https://weavetab.dev/schema/plugin.json",
   "name": "@weavetab/plugin-github",
   "displayName": "GitHub",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Official Weavetab GitHub plugin. Modular tools to analyze repositories, read raw source files, search issues, inspect pull requests, fetch raw diffs, and inspect active tabs directly without burning browser turns or API quota.",
   "entry": "dist/index.js",
   "engines": {
-    "weavetab": "^2.5.2",
+    "weavetab": ">=2.6.0",
     "node": ">=18.0.0"
   },
   "environments": [

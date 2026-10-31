@@ -5,7 +5,7 @@
 > and inspect active tabs directly — **without burning browser turns or API quota**.
 
 [![Trust: Official](https://img.shields.io/badge/trust-official-1e3a8a.svg?style=flat-square)](https://weavetab.dev)
-[![Engine: Weavetab ^2.5.2](https://img.shields.io/badge/engine-weavetab_%5E2.5.2-black.svg?style=flat-square)](https://weavetab.dev)
+[![Engine: Weavetab >=2.6.0](https://img.shields.io/badge/engine-weavetab_%3E%3D2.6.0-black.svg?style=flat-square)](https://weavetab.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 
 ---

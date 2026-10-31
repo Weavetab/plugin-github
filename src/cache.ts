@@ -21,8 +21,16 @@ export async function loadRepoCache(
   store: PluginStorage | undefined | null,
   ttlMs: number
 ): Promise<GithubRepoCache | null> {
-  if (!store || typeof store.getJSON !== "function") return null;
-  const data = await store.getJSON<GithubRepoCache>(cacheFile(owner, repo));
+  if (!store) return null;
+  const key = cacheFile(owner, repo);
+
+  if (typeof (store as any).getWithExpiry === "function") {
+    const cached = (await (store as any).getWithExpiry(key)) as GithubRepoCache | null;
+    if (cached) return cached;
+  }
+
+  if (typeof store.getJSON !== "function") return null;
+  const data = await store.getJSON<GithubRepoCache>(key);
   if (!data || typeof data.analyzed_at !== "number") return null;
   if (Date.now() - data.analyzed_at > ttlMs) return null; // stale
   return data;
@@ -31,8 +39,18 @@ export async function loadRepoCache(
 /** Persist an analysis result into the plugin's isolated storage. */
 export async function saveRepoCache(
   data: GithubRepoCache,
-  store: PluginStorage | undefined | null
+  store: PluginStorage | undefined | null,
+  ttlMs?: number
 ): Promise<void> {
-  if (!store || typeof store.setJSON !== "function") return;
-  await store.setJSON(cacheFile(data.owner, data.repo), data);
+  if (!store) return;
+  const key = cacheFile(data.owner, data.repo);
+
+  if (ttlMs && typeof (store as any).setWithExpiry === "function") {
+    await (store as any).setWithExpiry(key, data, ttlMs);
+    return;
+  }
+
+  if (typeof store.setJSON === "function") {
+    await store.setJSON(key, data);
+  }
 }

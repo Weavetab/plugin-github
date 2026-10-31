@@ -54,7 +54,7 @@ function buildRunContext(ctx: PluginContext, session: unknown): GithubRunContext
 
 export const githubPlugin = definePlugin({
   name: "@weavetab/plugin-github",
-  version: "1.1.0",
+  version: "1.2.0",
   description:
     "Official Weavetab GitHub plugin — modular repository analysis, raw source reads, issues, pull requests, raw diffs, and active-tab DOM inspection.",
 
