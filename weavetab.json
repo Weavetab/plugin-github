@@ -2,36 +2,37 @@
   "$schema": "https://weavetab.dev/schema/plugin.json",
   "name": "@weavetab/plugin-github",
   "displayName": "GitHub",
-  "version": "1.2.0",
-  "description": "Official Weavetab GitHub plugin. Modular tools to analyze repositories, read raw source files, search issues, inspect pull requests, fetch raw diffs, and inspect active tabs directly without burning browser turns or API quota.",
+  "version": "1.3.0",
+  "description": "Official Weavetab GitHub plugin — modular repository analysis, raw source reads, issues, pull requests, raw diffs, CLI commands, and active-tab DOM inspection without burning browser turns or API quota.",
   "entry": "dist/index.js",
+  "agentsMd": "AGENTS.md",
+  "author": {
+    "name": "Weavetab",
+    "url": "https://weavetab.dev",
+    "role": "Core Team"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/Weavetab/plugin-github",
+  "repository": "https://github.com/Weavetab/plugin-github",
   "engines": {
-    "weavetab": ">=2.6.0",
+    "weavetab": "^2.6.2",
     "node": ">=18.0.0"
   },
   "environments": [
-    "mcp"
+    "mcp",
+    "cli",
+    "browser"
   ],
-  "authors": [
-    {
-      "name": "fy2ne",
-      "role": "Author & Maintainer",
-      "url": "https://github.com/fy2ne"
-    }
+  "keywords": [
+    "weavetab",
+    "weavetab-plugin",
+    "weavetab-official",
+    "mcp",
+    "github",
+    "repository",
+    "issues",
+    "pull-requests"
   ],
-  "license": "MIT",
-  "tags": [
-    "GitHub",
-    "Developer Tools",
-    "Repositories",
-    "Issues",
-    "Pull Requests",
-    "Diff"
-  ],
-  "links": {
-    "github": "https://github.com/weavetab/plugin-github",
-    "npm": "https://www.npmjs.com/package/@weavetab/plugin-github"
-  },
   "defaultConfig": {
     "cacheTtlMs": 1800000,
     "maxReadLines": 200,
@@ -41,11 +42,11 @@
     "config": {
       "read": true,
       "write": true,
-      "reason": "Reads and persists plugin configuration (cache TTL, read limits, issue limits, optional token) at ~/.weavetab/plugins/@weavetab_plugin-github/config.json."
+      "reason": "Read and persist isolated plugin settings."
     },
     "cdp": {
       "evaluate": true,
-      "reason": "Evaluates active tab URL and DOM on github.com to infer targets or inspect active views without API calls."
+      "reason": "Reads URL and DOM on github.com without navigating or mutating."
     },
     "network": {
       "domains": [
@@ -53,162 +54,281 @@
         "raw.githubusercontent.com",
         "github.com"
       ],
-      "reason": "Fetches repository metadata, file trees, raw source files, issues, pull requests, and raw git diffs from GitHub REST API, CDN, and web endpoints."
+      "reason": "Fetches repository metadata, issues, PRs, raw files, and diffs from GitHub."
     },
     "tools": {
       "add": true,
-      "reason": "Registers github_analyze, github_read, github_issues, github_pull_request, github_diff, and github_active_tab MCP tools."
+      "reason": "Registers the 6 modular github_* MCP tools."
+    },
+    "commands": {
+      "add": true,
+      "reason": "Registers repo-summary and pr-diff CLI commands."
+    },
+    "prompts": {
+      "add": true,
+      "reason": "Registers /pr-review prompt utility."
+    },
+    "resources": {
+      "add": true,
+      "reason": "Registers @github://ratelimit resource utility."
     }
   },
   "tools": [
     {
       "name": "github_analyze",
-      "description": "Analyze a GitHub repository's metadata, default branch, recursive file tree, and README snippet over the GitHub REST API without burning browser turns.",
+      "description": "High-level repository reconnaissance: metadata, default branch, recursive file tree, and README preview. Results are cached in isolated storage.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "repo": {
             "type": "string",
-            "description": "Target repository as 'owner/repo' or full github.com URL. When omitted, inferred from the active browser tab."
+            "description": "Repository in 'owner/repo' format or GitHub URL (inferred from active tab if omitted)."
           }
         }
       }
     },
     {
       "name": "github_read",
-      "description": "Fetch raw source files from a GitHub repository directly over HTTP without burning browser turns or API search quota.",
+      "description": "Fetch raw file contents from raw.githubusercontent.com with zero REST API quota consumption.",
       "inputSchema": {
         "type": "object",
         "properties": {
+          "repo": {
+            "type": "string",
+            "description": "Repository in 'owner/repo' format or GitHub URL."
+          },
           "paths": {
             "type": "array",
             "items": { "type": "string" },
-            "description": "File paths relative to the repository root, e.g. ['src/index.ts', 'README.md']."
-          },
-          "repo": {
-            "type": "string",
-            "description": "Target repository as 'owner/repo' or full github.com URL. When omitted, inferred from active tab."
+            "description": "File paths relative to repository root."
           },
           "branch": {
             "type": "string",
-            "description": "Target branch or tag (defaults to 'main' or cached default branch). Avoids API discovery calls."
+            "description": "Target branch or tag (defaults to cached default branch or 'main')."
           },
           "line_range": {
             "type": "array",
             "items": { "type": "number" },
-            "description": "Optional [start, end] 1-indexed line range to return per file."
+            "description": "Optional [start, end] 1-indexed line slice."
           }
         }
       }
     },
     {
       "name": "github_issues",
-      "description": "List, search, or inspect issues and comments in a GitHub repository without burning browser turns.",
+      "description": "Inspect a single issue with comments or list/search repository issues.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "repo": {
             "type": "string",
-            "description": "Target repository as 'owner/repo' or full github.com URL."
+            "description": "Repository in 'owner/repo' format or GitHub URL."
           },
           "number": {
             "type": "number",
-            "description": "Specific issue number to fetch full details and timeline comments for."
+            "description": "Specific issue number to fetch with timeline comments."
           },
           "search": {
             "type": "string",
-            "description": "Free-text query to search issues in the repository."
+            "description": "Search query string for repository issues."
           },
           "labels": {
             "type": "array",
             "items": { "type": "string" },
-            "description": "Restrict results to these labels."
+            "description": "Filter by label names."
           },
           "state": {
             "type": "string",
             "enum": ["open", "closed", "all"],
-            "description": "Filter by issue state (default 'open')."
+            "description": "Issue state filter."
           },
           "limit": {
             "type": "number",
-            "description": "Maximum number of issues to return (default 5)."
+            "description": "Max issues to return (default 5)."
           }
         }
       }
     },
     {
       "name": "github_pull_request",
-      "description": "Examine pull request details, changed files, diff stats, and comments, or list recent pull requests in a GitHub repository without burning browser turns.",
+      "description": "Inspect a pull request (changed files, diff stats, comments) or list recent pull requests.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "repo": {
             "type": "string",
-            "description": "Target repository as 'owner/repo' or full github.com URL."
+            "description": "Repository in 'owner/repo' format or GitHub URL."
           },
           "number": {
             "type": "number",
-            "description": "Pull request number to fetch full detail, changed files, and comments for."
+            "description": "Specific pull request number."
           },
           "state": {
             "type": "string",
             "enum": ["open", "closed", "all"],
-            "description": "Filter pull requests by state (default 'all' when listing)."
+            "description": "PR state filter."
           },
           "limit": {
             "type": "number",
-            "description": "Maximum pull requests to return when listing (default 10)."
+            "description": "Max PRs to return when listing (default 10)."
           }
         }
       }
     },
     {
       "name": "github_diff",
-      "description": "Fetch raw git diffs or patches for pull requests, commits, or branch comparisons directly from github.com without consuming REST API rate limits.",
+      "description": "Fetch raw unified diffs or git patches directly from github.com with zero REST API quota usage.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "repo": {
             "type": "string",
-            "description": "Target repository as 'owner/repo' or full github.com URL."
+            "description": "Repository in 'owner/repo' format or GitHub URL."
           },
           "pull_number": {
             "type": "number",
-            "description": "Pull request number to fetch the diff or patch for."
+            "description": "Pull request number to fetch diff for."
           },
           "commit_sha": {
             "type": "string",
-            "description": "Commit SHA to fetch the diff or patch for."
+            "description": "Commit SHA to fetch diff for."
           },
           "base": {
             "type": "string",
-            "description": "Base branch or commit for compare diff (requires 'head')."
+            "description": "Base branch or commit for compare diff."
           },
           "head": {
             "type": "string",
-            "description": "Head branch or commit for compare diff (requires 'base')."
+            "description": "Head branch or commit for compare diff."
           },
           "format": {
             "type": "string",
             "enum": ["diff", "patch"],
-            "description": "Output format: 'diff' (unified diff) or 'patch' (git patch with metadata). Default 'diff'."
+            "description": "Output format: 'diff' or 'patch'."
           }
         }
       }
     },
     {
       "name": "github_active_tab",
-      "description": "Inspect the active browser tab on github.com via local CDP evaluation. Extracts repository overview, open PR/issue discussion, or file content directly from the browser DOM with ZERO API calls. Works on private repositories you are logged into.",
+      "description": "Extract structured repository, PR, issue, or blob state from the active github.com browser tab via local CDP.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "scope": {
             "type": "string",
             "enum": ["auto", "summary", "files", "comments", "raw"],
-            "description": "Scope of data extraction from the page DOM (default 'auto')."
+            "description": "Extraction scope."
           }
         }
       }
+    }
+  ],
+  "commands": [
+    {
+      "name": "repo-summary",
+      "description": "Fetch repository metadata, default branch, file tree, and README snippet via CLI.",
+      "usage": "weavetab plugin use github repo-summary --repo <owner/repo>",
+      "options": [
+        {
+          "name": "repo",
+          "type": "string",
+          "description": "Repository in 'owner/repo' format or full GitHub URL",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "pr-diff",
+      "description": "Fetch unified diff and stats for a pull request directly from GitHub without API quota.",
+      "usage": "weavetab plugin use github pr-diff --repo <owner/repo> --pull_number <n>",
+      "options": [
+        {
+          "name": "repo",
+          "type": "string",
+          "description": "Repository in 'owner/repo' format",
+          "required": true
+        },
+        {
+          "name": "pull_number",
+          "type": "number",
+          "description": "Pull request number",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "issue-search",
+      "description": "Search open or closed repository issues by keyword directly via CLI.",
+      "usage": "weavetab plugin use github issue-search --repo <owner/repo> --query <text>",
+      "options": [
+        {
+          "name": "repo",
+          "type": "string",
+          "description": "Repository in 'owner/repo' format",
+          "required": true
+        },
+        {
+          "name": "query",
+          "type": "string",
+          "description": "Keywords to search",
+          "required": true
+        },
+        {
+          "name": "limit",
+          "type": "number",
+          "description": "Max issues to return (default 5)",
+          "required": false
+        }
+      ]
+    }
+  ],
+  "prompts": [
+    {
+      "name": "pr-review",
+      "description": "Structured pull request review prompt for security, performance, and regression analysis.",
+      "arguments": [
+        {
+          "name": "repo",
+          "description": "Repository in owner/repo format",
+          "required": true
+        },
+        {
+          "name": "pr",
+          "description": "Pull request number",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "issue-triage",
+      "description": "Structured issue triage prompt to diagnose root cause and plan implementation.",
+      "arguments": [
+        {
+          "name": "repo",
+          "description": "Repository in owner/repo format",
+          "required": true
+        },
+        {
+          "name": "issue",
+          "description": "Issue number",
+          "required": true
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "name": "github-ratelimit",
+      "uri": "github://ratelimit",
+      "description": "Current GitHub REST API rate-limit budget and quota status.",
+      "mimeType": "application/json"
+    },
+    {
+      "name": "github-context",
+      "uri": "github://context",
+      "description": "Active tab GitHub DOM context (current repository, branch, open PR, or issue metadata).",
+      "mimeType": "application/json"
     }
   ]
 }

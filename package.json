@@ -1,6 +1,6 @@
 {
   "name": "@weavetab/plugin-github",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Official Weavetab GitHub plugin - modular repository analysis, raw source reads, issues, pull requests, raw diffs, and active-tab DOM inspection without burning browser turns or API quota.",
   "type": "module",
   "main": "dist/index.js",
@@ -15,6 +15,7 @@
     "dist",
     "weavetab.json",
     "README.md",
+    "AGENTS.md",
     "LICENSE"
   ],
   "scripts": {
@@ -22,10 +23,10 @@
     "dev": "tsc --watch",
     "preflight": "weavetab preflight",
     "test": "node --test test/*.test.mjs",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build && weavetab preflight"
   },
   "dependencies": {
-    "@weavetab/sdk": "^2.6.0"
+    "@weavetab/sdk": "^2.6.2"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",

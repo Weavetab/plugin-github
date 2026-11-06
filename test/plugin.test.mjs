@@ -39,7 +39,7 @@ describe("@weavetab/plugin-github", () => {
   it("exposes a valid Weavetab plugin definition", () => {
     assert.equal(githubPlugin, plugin);
     assert.equal(plugin.name, "@weavetab/plugin-github");
-    assert.equal(plugin.version, "1.2.0");
+    assert.equal(plugin.version, "1.3.0");
     assert.equal(typeof plugin.onLoad, "function");
     assert.equal(typeof plugin.onUnload, "function");
     assert.deepEqual(plugin.defaultConfig, {
@@ -52,7 +52,7 @@ describe("@weavetab/plugin-github", () => {
   it("ships a manifest with official trust and all 6 declared tools", () => {
     assert.equal(manifest.name, "@weavetab/plugin-github");
     assert.ok(manifest.name.startsWith("@weavetab/plugin-"), "must be an official plugin prefix");
-    assert.equal(manifest.version, "1.2.0");
+    assert.equal(manifest.version, "1.3.0");
     assert.equal(manifest.entry, "dist/index.js");
 
     for (const [key, value] of Object.entries(manifest.permissions)) {
